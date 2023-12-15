@@ -11,11 +11,19 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 )
 
-var (
-	AwsRegionName = "eu-west-1"
-)
+func S3Connection(awsRegionName string) (*s3.Client, error) {
+	log.Infoln("Connecting to AWS")
+	// Load the Shared AWS Configuration (~/.aws/config)
+	cfg, err := awsconfig.LoadDefaultConfig(context.TODO(), awsconfig.WithRegion(awsRegionName))
+	if err != nil {
+		return nil, err
+	}
+	// Create an Amazon S3 service client
+	client := s3.NewFromConfig(cfg)
+	return client, nil
+}
 
-func GetS3ListObjects(bucketName string, bucketFolder string) (S3Folder, error) {
+func GetS3ListObjects(conn *s3.Client, bucketName string, bucketFolder string) (S3Folder, error) {
 	if len(bucketName) == 0 {
 		return S3Folder{}, errors.New("invalid parameters, bucket name is required")
 	}
@@ -23,15 +31,8 @@ func GetS3ListObjects(bucketName string, bucketFolder string) (S3Folder, error) 
 		bucketFolder = "/"
 	}
 	s3Folder := S3Folder{BucketName: bucketName, FolderName: bucketFolder, Objects: []S3Object{}}
-	log.Infoln("Connecting to AWS")
-	// Load the Shared AWS Configuration (~/.aws/config)
-	cfg, err := awsconfig.LoadDefaultConfig(context.TODO(), awsconfig.WithRegion(AwsRegionName))
-	if err != nil {
-		return s3Folder, err
-	}
 
 	// Create an Amazon S3 service client
-	client := s3.NewFromConfig(cfg)
 	params := &s3.ListObjectsV2Input{
 		Bucket: aws.String(bucketName),
 		Prefix: aws.String(bucketFolder),
@@ -39,7 +40,7 @@ func GetS3ListObjects(bucketName string, bucketFolder string) (S3Folder, error) 
 	// objects, err := client.ListObjectsV2(context.TODO(), input)
 
 	// Create the Paginator for the ListObjectsV2 operation.
-	p := s3.NewListObjectsV2Paginator(client, params)
+	p := s3.NewListObjectsV2Paginator(conn, params)
 
 	// Iterate through the S3 object pages, printing each object returned.
 	var i int
@@ -52,14 +53,15 @@ func GetS3ListObjects(bucketName string, bucketFolder string) (S3Folder, error) 
 		page, err := p.NextPage(context.TODO())
 		if err != nil {
 			log.Errorf("failed to get page %v, %v", i, err)
+			return s3Folder, err
 		}
 
 		// Log the objects found
 		for _, obj := range page.Contents {
-			log.Debugf("Object:", *obj.Key)
-			log.Debugf("Object:", *obj.ETag)
+			log.Debugf("Object: %s\n", *obj.Key)
+			log.Debugf("Object: %s\n", *obj.ETag)
 			s3Folder.Objects = append(s3Folder.Objects, S3Object{Key: *obj.Key, MD5: *obj.ETag})
 		}
 	}
-	return s3Folder, err
+	return s3Folder, nil
 }

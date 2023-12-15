@@ -10,7 +10,8 @@ import (
 )
 
 var (
-	zkHost string
+	zkHost        string
+	AwsRegionName = "eu-west-1"
 )
 
 func init() {
@@ -37,7 +38,7 @@ func init() {
 func main() {
 	fmt.Println("The app has been started")
 
-	// conn, err := cmd.Connection(zkHost)
+	// conn, err := cmd.ZkConnection(zkHost)
 	// if err != nil {
 	// 	panic(err)
 	// }
@@ -87,10 +88,14 @@ func main() {
 
 	// hash, _ := cmd.Hash(conn, "/tmp/more/testfile.txt")
 	// fmt.Println(hash)
-	result, err := cmd.GetS3ListObjects("solr-updater-2", "TAG2/")
+	client, err := cmd.S3Connection(AwsRegionName)
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
+	}
+	result, err := cmd.GetS3ListObjects(client, "solr-updater-2", "TAG2/")
+	if err != nil {
+		panic(err)
 	} else {
-		fmt.Println(result)
+		log.Infoln(result)
 	}
 }

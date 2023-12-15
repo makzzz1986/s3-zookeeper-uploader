@@ -12,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func Connection(host string) (*zk.Conn, error) {
+func ZkConnection(host string) (*zk.Conn, error) {
 	// Need to add host check
 	log.Infof("Connecting to %s\n", host)
 	c, _, err := zk.Connect([]string{host}, time.Second) //*10)
