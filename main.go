@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/makzzz1986/s3-zookeeper-uploader/cmd"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -15,6 +17,20 @@ func init() {
 	zkHost = os.Getenv("ZK_HOST")
 	if zkHost == "" {
 		zkHost = "127.0.0.1"
+	}
+
+	log.SetOutput(os.Stdout)
+	logLevel := os.Getenv("LOG_LEVEL")
+	if logLevel == "" || strings.ToLower(logLevel) == "info" {
+		log.SetLevel(log.InfoLevel) // default is INFO
+	} else if strings.ToLower(logLevel) == "debug" {
+		log.SetLevel(log.DebugLevel)
+	} else if strings.ToLower(logLevel) == "warn" {
+		log.SetLevel(log.WarnLevel)
+	} else if strings.ToLower(logLevel) == "error" {
+		log.SetLevel(log.ErrorLevel)
+	} else if strings.ToLower(logLevel) == "critical" || strings.ToLower(logLevel) == "fatal" {
+		log.SetLevel(log.FatalLevel)
 	}
 }
 

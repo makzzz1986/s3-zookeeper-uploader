@@ -3,7 +3,8 @@ package cmd
 import (
 	"context"
 	"errors"
-	"fmt"
+
+	log "github.com/sirupsen/logrus"
 
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -22,7 +23,7 @@ func GetS3ListObjects(bucketName string, bucketFolder string) (S3Folder, error) 
 		bucketFolder = "/"
 	}
 	s3Folder := S3Folder{BucketName: bucketName, FolderName: bucketFolder, Objects: []S3Object{}}
-	fmt.Println("Connecting to AWS")
+	log.Infoln("Connecting to AWS")
 	// Load the Shared AWS Configuration (~/.aws/config)
 	cfg, err := awsconfig.LoadDefaultConfig(context.TODO(), awsconfig.WithRegion(AwsRegionName))
 	if err != nil {
@@ -42,7 +43,7 @@ func GetS3ListObjects(bucketName string, bucketFolder string) (S3Folder, error) 
 
 	// Iterate through the S3 object pages, printing each object returned.
 	var i int
-	fmt.Println("Objects:")
+	log.Debugln("Objects:")
 	for p.HasMorePages() {
 		i++
 
@@ -50,13 +51,13 @@ func GetS3ListObjects(bucketName string, bucketFolder string) (S3Folder, error) 
 		// you could add timeouts or deadlines.
 		page, err := p.NextPage(context.TODO())
 		if err != nil {
-			fmt.Printf("failed to get page %v, %v", i, err)
+			log.Errorf("failed to get page %v, %v", i, err)
 		}
 
 		// Log the objects found
 		for _, obj := range page.Contents {
-			fmt.Println("Object:", *obj.Key)
-			fmt.Println("Object:", *obj.ETag)
+			log.Debugf("Object:", *obj.Key)
+			log.Debugf("Object:", *obj.ETag)
 			s3Folder.Objects = append(s3Folder.Objects, S3Object{Key: *obj.Key, MD5: *obj.ETag})
 		}
 	}
