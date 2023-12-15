@@ -73,19 +73,17 @@ func Get(c *zk.Conn, path string) ([]byte, error) {
 	return data, err
 }
 
-// func GetHash(c *zk.Conn, path string) (string, error) {
-// 	fmt.Printf("Getting MD5 hash %s\n", path)
-// 	data, err := Get(c, path)
-// 	if err != nil {
-// 		return "", err
-// 	}
+func Hash(c *zk.Conn, path string) (string, error) {
+	fmt.Printf("Getting MD5 hash of znode %s\n", path)
+	data, err := Get(c, path)
+	if err != nil {
+		return "", err
+	}
 
-// 	fmt.Printf("The data of %s is taken, its length is %d\n", path, len(data))
-// 	hash := md5.Sum(data)
-// 	hex := hex.EncodeToString(hash[:])
-
-// 	return hex, nil
-// }
+	fmt.Printf("The data of %s is taken, its length is %d\n", path, len(data))
+	hash := GetHash(data)
+	return hash, nil
+}
 
 func GetHash(data []byte) string {
 	fmt.Printf("Getting MD5 hash of data with len: %d\n", len(data))

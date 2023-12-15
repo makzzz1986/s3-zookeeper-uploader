@@ -21,12 +21,12 @@ func init() {
 func main() {
 	fmt.Println("The app has been started")
 
-	conn, err := cmd.Connection(zkHost)
-	if err != nil {
-		panic(err)
-	}
+	// conn, err := cmd.Connection(zkHost)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	cmd.List(conn, "/")
+	// cmd.List(conn, "/")
 	// data, err := cmd.Get(conn, "/security.json")
 	// // data, err := cmd.Get(conn, "/aliases.json")
 	// if err != nil {
@@ -48,12 +48,12 @@ func main() {
 	// 	}
 	// }
 
-	data, err := os.ReadFile("notes/testfile.txt") // just pass the file name
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		cmd.GetHash(data)
-	}
+	// data, err := os.ReadFile("notes/testfile.txt") // just pass the file name
+	// if err != nil {
+	// 	fmt.Println(err)
+	// } else {
+	// 	cmd.GetHash(data)
+	// }
 
 	// uploaded, err := cmd.Upload(conn, "/tmp", []byte{})
 	// if err != nil {
@@ -62,10 +62,19 @@ func main() {
 	// 	fmt.Println(uploaded)
 	// }
 
-	uploaded, err := cmd.Upload(conn, "/tmp/more/subfolders/testfile.txt", data)
+	// uploaded, err := cmd.Upload(conn, "/tmp/more/testfile.txt", data)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// } else {
+	// 	fmt.Println(uploaded)
+	// }
+
+	// hash, _ := cmd.Hash(conn, "/tmp/more/testfile.txt")
+	// fmt.Println(hash)
+	result, err := cmd.GetS3ListObjects("solr-updater-2", "TAG2/")
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		fmt.Println(uploaded)
+		fmt.Println(result)
 	}
 }
