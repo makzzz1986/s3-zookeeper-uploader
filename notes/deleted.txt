@@ -1,0 +1,71 @@
+	// cmd.zkList(conn, "/")
+	// bla, _ := cmd.ZkExists(zkConn, "tmp/collection1/schema.xml")
+	// log.Infoln(bla)
+
+	// bla, _ = cmd.ZkExists(zkConn, "/tmp/collection1/schema.xml")
+	// log.Infoln(bla)
+
+	// data, err := cmd.zkGet(conn, "/security.json")
+	// // data, err := cmd.zkGet(conn, "/aliases.json")
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// fmt.Println(string(data[:]))
+
+	// data, _ = cmd.zkGet(conn, "/autoscaling")
+	// fmt.Println(string(data[:]))
+
+	// treePath := "/overseer_elect"
+	// tree, err := cmd.zkTree(conn, treePath)
+	// if err != nil {
+	// 	panic(err)
+	// } else {
+	// 	fmt.Printf("\nPrinting file tree of %s\n", treePath)
+	// 	for _, file := range tree {
+	// 		fmt.Println(file)
+	// 	}
+	// }
+
+	// data, err := os.ReadFile("notes/testfile.txt") // just pass the file name
+	// if err != nil {
+	// 	fmt.Println(err)
+	// } else {
+	// 	cmd.zkGetHash(data)
+	// }
+
+	// uploaded, err := cmd.zkUpload(conn, "/tmp", []byte{})
+	// if err != nil {
+	// 	fmt.Println(err)
+	// } else {
+	// 	fmt.Println(uploaded)
+	// }
+
+	// uploaded, err := cmd.zkUpload(conn, "/tmp/more/testfile.txt", data)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// } else {
+	// 	fmt.Println(uploaded)
+	// }
+
+	// hash, _ := cmd.zkHash(conn, "/tmp/more/testfile.txt")
+	// fmt.Println(hash)
+
+
+
+    
+
+	// result, err := cmd.S3ListObjects(s3client, s3bucket, "TAG3/")
+	// if err != nil {
+	// 	panic(err)
+	// } else {
+	// 	log.Infoln(result)
+	// 	for _, object := range result.Objects {
+	// 		data, err := cmd.S3GetObject(s3client, s3bucket, object.Key)
+	// 		if err != nil {
+	// 			panic(err)
+	// 		} else {
+	// 			log.Infoln("Getting object:", object, string(data))
+	// 		}
+	// 	}
+	// }
+
