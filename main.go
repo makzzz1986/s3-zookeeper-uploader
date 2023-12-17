@@ -5,6 +5,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/go-zookeeper/zk"
 	"github.com/makzzz1986/s3-zookeeper-uploader/cmd"
 	log "github.com/sirupsen/logrus"
 )
@@ -38,64 +40,82 @@ func init() {
 func main() {
 	fmt.Println("The app has been started")
 
-	// conn, err := cmd.ZkConnection(zkHost)
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// cmd.List(conn, "/")
-	// data, err := cmd.Get(conn, "/security.json")
-	// // data, err := cmd.Get(conn, "/aliases.json")
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// fmt.Println(string(data[:]))
-
-	// data, _ = cmd.Get(conn, "/autoscaling")
-	// fmt.Println(string(data[:]))
-
-	// treePath := "/overseer_elect"
-	// tree, err := cmd.Tree(conn, treePath)
-	// if err != nil {
-	// 	panic(err)
-	// } else {
-	// 	fmt.Printf("\nPrinting file tree of %s\n", treePath)
-	// 	for _, file := range tree {
-	// 		fmt.Println(file)
-	// 	}
-	// }
-
-	// data, err := os.ReadFile("notes/testfile.txt") // just pass the file name
-	// if err != nil {
-	// 	fmt.Println(err)
-	// } else {
-	// 	cmd.GetHash(data)
-	// }
-
-	// uploaded, err := cmd.Upload(conn, "/tmp", []byte{})
-	// if err != nil {
-	// 	fmt.Println(err)
-	// } else {
-	// 	fmt.Println(uploaded)
-	// }
-
-	// uploaded, err := cmd.Upload(conn, "/tmp/more/testfile.txt", data)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// } else {
-	// 	fmt.Println(uploaded)
-	// }
-
-	// hash, _ := cmd.Hash(conn, "/tmp/more/testfile.txt")
-	// fmt.Println(hash)
-	client, err := cmd.S3Connection(AwsRegionName)
+	zkConn, err := cmd.ZkConnection(zkHost)
 	if err != nil {
 		panic(err)
 	}
-	result, err := cmd.GetS3ListObjects(client, "solr-updater-2", "TAG2/")
+
+	s3bucket := "solr-updater-2"
+	s3client, err := cmd.S3Connection(AwsRegionName)
+	if err != nil {
+		panic(err)
+	}
+
+	result, err := cmd.S3ListObjects(s3client, s3bucket, "TAG3/")
 	if err != nil {
 		panic(err)
 	} else {
 		log.Infoln(result)
+		comparison, err := cmd.ZkZnodesToUpdate(zkConn, result)
+		if err != nil {
+			panic(err)
+		} else {
+			ok, err := SyncObjects(s3client, zkConn, comparison)
+			if err != nil {
+				panic(err)
+			} else {
+				log.Infof("S3 folder replication ended with: %v", ok)
+			}
+		}
 	}
+}
+
+func SyncObjects(s3Conn *s3.Client, zkConn *zk.Conn, s3Folder cmd.S3Folder) (cmd.S3Folder, error) {
+	log.Infof("Replication the folder s3://%s/%s to Zookeeper", s3Folder.BucketName, s3Folder.FolderName)
+	var updatedObjects []cmd.S3Object
+	for _, object := range s3Folder.Objects {
+		if object.ToUpdate {
+			log.Debugf("Uploading the file s3://%s/%s to %s", s3Folder.BucketName, object.Key, object.FilePath)
+			synced, err := SyncObject(s3Conn, zkConn, s3Folder.BucketName, object.Key, object.FilePath)
+			if err != nil {
+				return s3Folder, err
+			} else {
+				log.Infof("The file s3://%s/%s is synced to %s", s3Folder.BucketName, object.Key, object.FilePath)
+				object.Synced = synced
+			}
+		}
+		updatedObjects = append(updatedObjects, object)
+	}
+	s3Folder.Objects = updatedObjects
+	return s3Folder, nil
+}
+
+func SyncObject(s3Conn *s3.Client, zkConn *zk.Conn, bucket string, s3key string, zkznode string) (bool, error) {
+	log.Infof("Syncing the file from s3//%s/%s to Zookeeper %s", bucket, s3key, zkznode)
+	log.Debugf("Downloading %s", s3key)
+	data, err := cmd.S3GetObject(s3Conn, bucket, s3key)
+	if err != nil {
+		return false, err
+	} else {
+		_, err := cmd.ZkUpload(zkConn, zkznode, data)
+		if err != nil {
+			return false, err
+		}
+	}
+	return true, nil
+}
+
+func NeedToSync(zkConn *zk.Conn, s3Folder cmd.S3Folder) (bool, cmd.S3Folder, error) {
+	toUpdate := false
+	comparison, err := cmd.ZkZnodesToUpdate(zkConn, s3Folder)
+	if err != nil {
+		return true, s3Folder, err
+	}
+	s3Folder = comparison
+	for _, object := range s3Folder.Objects {
+		if !object.Synced {
+			toUpdate = true
+		}
+	}
+	return toUpdate, s3Folder, nil
 }

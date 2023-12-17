@@ -3,6 +3,8 @@ package cmd
 import (
 	"context"
 	"errors"
+	"io"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 
@@ -23,7 +25,7 @@ func S3Connection(awsRegionName string) (*s3.Client, error) {
 	return client, nil
 }
 
-func GetS3ListObjects(conn *s3.Client, bucketName string, bucketFolder string) (S3Folder, error) {
+func S3ListObjects(conn *s3.Client, bucketName string, bucketFolder string) (S3Folder, error) {
 	if len(bucketName) == 0 {
 		return S3Folder{}, errors.New("invalid parameters, bucket name is required")
 	}
@@ -40,17 +42,17 @@ func GetS3ListObjects(conn *s3.Client, bucketName string, bucketFolder string) (
 	// objects, err := client.ListObjectsV2(context.TODO(), input)
 
 	// Create the Paginator for the ListObjectsV2 operation.
-	p := s3.NewListObjectsV2Paginator(conn, params)
+	paginator := s3.NewListObjectsV2Paginator(conn, params)
 
 	// Iterate through the S3 object pages, printing each object returned.
 	var i int
 	log.Debugln("Objects:")
-	for p.HasMorePages() {
+	for paginator.HasMorePages() {
 		i++
 
 		// Next Page takes a new context for each page retrieval. This is where
 		// you could add timeouts or deadlines.
-		page, err := p.NextPage(context.TODO())
+		page, err := paginator.NextPage(context.TODO())
 		if err != nil {
 			log.Errorf("failed to get page %v, %v", i, err)
 			return s3Folder, err
@@ -60,8 +62,41 @@ func GetS3ListObjects(conn *s3.Client, bucketName string, bucketFolder string) (
 		for _, obj := range page.Contents {
 			log.Debugf("Object: %s\n", *obj.Key)
 			log.Debugf("Object: %s\n", *obj.ETag)
-			s3Folder.Objects = append(s3Folder.Objects, S3Object{Key: *obj.Key, MD5: *obj.ETag})
+			s3Folder.Objects = append(s3Folder.Objects, S3Object{Key: *obj.Key, FilePath: znodeFromKey(bucketFolder, *obj.Key), MD5: cleanETag(*obj.ETag)})
 		}
 	}
 	return s3Folder, nil
+}
+
+func cleanETag(etag string) string {
+	return strings.TrimPrefix(strings.TrimSuffix(etag, "\""), "\"")
+}
+
+func znodeFromKey(folder string, path string) string {
+	result := strings.TrimPrefix(path, folder)
+	if !strings.HasPrefix(result, "/") {
+		result = "/" + result
+	}
+	return result
+}
+
+func S3GetObject(conn *s3.Client, bucketName string, key string) ([]byte, error) {
+	params := &s3.GetObjectInput{
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(key),
+	}
+
+	resp, err := conn.GetObject(context.TODO(), params)
+	if err != nil {
+		log.Error("Error retrieving object:", err)
+		return nil, err
+	}
+	body, err := io.ReadAll(resp.Body)
+	defer resp.Body.Close()
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	} else {
+		return body, nil
+	}
 }
