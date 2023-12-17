@@ -1,4 +1,4 @@
-package cmd
+package s3_zookeeper_uploader
 
 type S3Object struct {
 	Key      string

@@ -1,4 +1,4 @@
-package cmd
+package s3_zookeeper_uploader
 
 import (
 	"context"
